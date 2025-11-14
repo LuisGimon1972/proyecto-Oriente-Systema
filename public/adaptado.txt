@@ -1,0 +1,191 @@
+let paginaAtualFornecedores = 1;
+let registrosPorPaginaFornecedores = 12;
+let listaParcelasFornecedorFiltradas = [];
+let valorTotalSelecionadoFornecedor = 0;
+let subtotalFornecedorSelecionado = 0;
+let parcelasFornecedorSelecionadas = new Map();
+let swFornecedor = 0;
+
+function carregarFornecedoresFiltro() {
+  limparNome(); // mesma função de reset do cliente
+  document.getElementById('formPresenta').style.display = 'none';
+  document.getElementById('formListaPagarFornecedor').style.display = 'block';
+  document.getElementById('selectFornecedorFiltro').style.display = 'block';
+  document.getElementById('fornecedor').style.display = 'block';
+  document.getElementById('btnFinalizarPagar').style.display = 'none';
+}
+
+function verParcelasDoFornecedor() {
+  document.getElementById('btnFinalizarPagar').style.display = 'none';
+  swFornecedor = 1;
+  removerPaginacaoFornecedores();
+
+  const controleFornecedor = controleSeleFornecedor;
+  if (!controleFornecedor) return;
+
+  fetch('/pagar')
+    .then(res => res.json())
+    .then(pagar => {
+      listaParcelasFornecedorFiltradas = pagar.filter(p =>
+        String(p.fornecedor_id) === String(controleFornecedor) && p.status === 'ABERTO'
+      );
+
+      if (listaParcelasFornecedorFiltradas.length === 0) {
+        document.getElementById('tabelaPagarFornecedor').querySelector('tbody').innerHTML =
+          `<tr><td colspan="14" style="text-align: center;">Nenhuma parcela encontrada para o fornecedor selecionado.</td></tr>`;
+        document.getElementById('btnPagarParcelasFornecedor').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('btnPagarParcelasFornecedor').style.display = 'block';
+      paginaAtualFornecedores = 1;
+      renderizarTabelaFornecedores();
+    })
+    .catch(err => alert('Erro ao buscar parcelas: ' + err.message));
+
+  const btnPagar = document.getElementById('btnPagarParcelasFornecedor');
+  if (btnPagar) {
+    btnPagar.onclick = () => {
+      const controleFornecedor = controleSeleFornecedor;
+      if (!controleFornecedor) return showToast("Selecione um fornecedor!", 2500);
+      const selecionadas = document.querySelectorAll('.checkParcelaFornecedor:checked');
+      if (selecionadas.length === 0) return showToast("Selecione ao menos uma parcela!", 2500);
+      pagarParcelasFornecedor(); // função a implementar
+    };
+  }
+}
+
+function renderizarTabelaFornecedores() {
+  const tabela = document.getElementById('tabelaPagarFornecedor');
+  const tbody = tabela.querySelector('tbody');
+  tbody.innerHTML = '';
+  const inicio = (paginaAtualFornecedores - 1) * registrosPorPaginaFornecedores;
+  const fim = inicio + registrosPorPaginaFornecedores;
+  const parcelasPagina = listaParcelasFornecedorFiltradas.slice(inicio, fim);
+
+  let totalAberto = 0;
+
+  parcelasPagina.forEach(parcela => {
+    const valorAberto = parseFloat(parcela.valororiginal || 0) +
+                        parseFloat(parcela.multa || 0) +
+                        parseFloat(parcela.juros || 0) -
+                        parseFloat(parcela.valorpago || 0);
+    totalAberto += valorAberto;
+    const controle = String(parcela.controle);
+    const checked = parcelasFornecedorSelecionadas.has(controle) ? 'checked' : '';
+    const linha = document.createElement('tr');
+    linha.innerHTML = `
+      <td><input type="checkbox" class="checkParcelaFornecedor" value="${controle}" data-valor="${valorAberto.toFixed(2)}" ${checked}></td>
+      <td>${controle}</td>
+      <td>${parcela.funcionario}</td>
+      <td>${parcela.nomefornecedor}</td>
+      <td>R$ ${parseFloat(parcela.valororiginal).toFixed(2)}</td>
+      <td>R$ ${parseFloat(parcela.valorpago).toFixed(2)}</td>
+      <td>${parcela.numeroparcela}</td>
+      <td>${parcela.totalparcelas}</td>
+      <td>${formatarDataBR(parcela.datacadastro)}</td>
+      <td>${formatarDataBR(parcela.datavencimento)}</td>
+      <td>R$ ${parseFloat(parcela.multa).toFixed(2)}</td>
+      <td>R$ ${parseFloat(parcela.juros).toFixed(2)}</td>
+      <td>${parcela.status}</td>
+      <td><button class="btnExcluirPagar" data-controle="${controle}">🗑️</button></td>
+    `;
+    tbody.appendChild(linha);
+  });
+
+  tbody.innerHTML += `
+    <tr>
+      <td colspan="14" style="text-align: right; font-weight: bold; padding-top: 10px;">
+        TOTAL EM ABERTO: R$ ${totalAberto.toFixed(2)}
+      </td>
+    </tr>
+    <tr>
+      <td colspan="14" style="text-align: right; font-weight: bold;" id="totalFornecedorSelecionadas">
+        TOTAL DE SELECIONADAS: R$ ${valorTotalSelecionadoFornecedor.toFixed(2)}
+      </td>
+    </tr>
+  `;
+
+  document.querySelectorAll('.btnExcluirPagar').forEach(botao => {
+    botao.style.cssText = `
+      background-color: red; color: white;
+      border: none; padding: 6px 12px;
+      border-radius: 8px; cursor: pointer;
+    `;
+    botao.onclick = () => {
+      const controle = botao.getAttribute('data-controle');
+      removerPagarC(controle); // função a implementar
+    };
+  });
+
+  const atualizarTotalSelecionadas = () => {
+    document.querySelectorAll('.checkParcelaFornecedor').forEach(cb => {
+      const controle = cb.value;
+      const valor = parseFloat(cb.getAttribute('data-valor') || 0);
+
+      if (cb.checked) {
+        parcelasFornecedorSelecionadas.set(controle, valor);
+      } else {
+        parcelasFornecedorSelecionadas.delete(controle);
+      }
+    });
+
+    let total = 0;
+    parcelasFornecedorSelecionadas.forEach(v => total += v);
+    valorTotalSelecionadoFornecedor = total;
+    subtotalFornecedorSelecionado = total.toFixed(2);
+    document.getElementById('totalFornecedorSelecionadas').innerText =
+      `TOTAL DE SELECIONADAS: R$ ${total.toFixed(2)}`;
+  };
+
+  document.querySelectorAll('.checkParcelaFornecedor').forEach(cb =>
+    cb.addEventListener('change', atualizarTotalSelecionadas)
+  );
+
+  const checkTodos = document.getElementById('checkTodosFornecedor');
+  if (checkTodos) {
+    checkTodos.checked = false;
+    checkTodos.onchange = () => {
+      document.querySelectorAll('.checkParcelaFornecedor').forEach(cb => {
+        cb.checked = checkTodos.checked;
+      });
+      atualizarTotalSelecionadas();
+    };
+  }
+
+  renderizarControlesPaginacaoFornecedor();
+}
+
+function renderizarControlesPaginacaoFornecedor() {
+  let container = document.getElementById('paginacaoParcelasFornecedor');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'paginacaoParcelasFornecedor';
+    container.style = 'margin-top: 10px; text-align: center;';
+    document.getElementById('tabelaPagarFornecedor').after(container);
+  }
+
+  const totalPaginas = Math.ceil(listaParcelasFornecedorFiltradas.length / registrosPorPaginaFornecedores);
+  container.innerHTML = '';
+
+  for (let i = 1; i <= totalPaginas; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.style = `
+      margin: 0 4px; padding: 6px 12px;
+      ${i === paginaAtualFornecedores ? 'font-weight: bold; background-color: #1976d2; color: white;' : ''}
+    `;
+    btn.onclick = () => {
+      paginaAtualFornecedores = i;
+      renderizarTabelaFornecedores();
+    };
+    container.appendChild(btn);
+  }
+}
+
+function removerPaginacaoFornecedores() {
+  const container = document.getElementById('paginacaoParcelasFornecedor');
+  if (container) {
+    container.remove();
+  }
+}

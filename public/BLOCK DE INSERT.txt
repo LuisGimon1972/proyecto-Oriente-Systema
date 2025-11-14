@@ -1,0 +1,6 @@
+EXECUTE BLOCK AS
+BEGIN
+  INSERT INTO TCSTIBSCBS (...) VALUES (...);
+  INSERT INTO TCSTIBSCBS (...) VALUES (...);
+  -- e assim por diante
+END

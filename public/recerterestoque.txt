@@ -1,0 +1,67 @@
+async function cancelarVenda() {
+  await reverterEstoque(); // devolve o estoque
+  limparVenda();
+  limparNome();
+}
+
+// Nova função que devolve o estoque
+async function reverterEstoque() {
+  for (const item of vendas) {
+    try {
+      await fetch(`/produtos/${item.controle}/aumentar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantidade: item.quantidade })
+      });
+    } catch (err) {
+      console.error(`Erro ao devolver estoque do produto ${item.produto}:`, err);
+    }
+  }
+}
+
+
+function adicionarItemVenda(produto, quantidade) {
+  const total = produto.precovenda * quantidade;
+  vendas.push({
+    controle: produto.controle,   // <-- Adiciona isso
+    produto: produto.produto,
+    precovenda: produto.precovenda,
+    quantidade,
+    total
+  });
+}
+
+
+
+
+
+// Rota para aumentar o estoque de um produto
+app.post('/produtos/:controle/aumentar', express.json(), (req, res) => {
+  const controle = parseInt(req.params.controle);
+  const quantidadeAumentar = parseInt(req.body.quantidade);
+
+  if (isNaN(quantidadeAumentar) || quantidadeAumentar <= 0) {
+    return res.status(400).send('Quantidade inválida');
+  }
+
+  db.get('SELECT quantidade FROM produtos WHERE controle = ?', [controle], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Erro no banco de dados');
+    }
+    if (!row) {
+      return res.status(404).send('Produto não encontrado');
+    }
+
+    const novaQuantidade = row.quantidade + quantidadeAumentar;
+
+    db.run('UPDATE produtos SET quantidade = ? WHERE controle = ?', [novaQuantidade, controle], (err2) => {
+      if (err2) {
+        console.error(err2);
+        return res.status(500).send('Erro ao atualizar estoque');
+      }
+
+      res.json({ mensagem: 'Estoque aumentado com sucesso', novaQuantidade });
+    });
+  });
+});
