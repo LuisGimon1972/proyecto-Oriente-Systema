@@ -271,10 +271,6 @@ db.run(`
   )
 `);
 
-
-// ================================
-// TABELA: objetosVeiculos
-// ================================
 db.run(`
   CREATE TABLE IF NOT EXISTS objetosVeiculos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
