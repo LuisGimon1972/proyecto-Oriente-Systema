@@ -32,13 +32,14 @@ function cadordemos() {
   document.getElementById('btnFinalizarOsOs').style.display = 'none';    
   document.getElementById('btnSalvarOrdem').style.display = 'inline-block';
   document.getElementById('btnAltOrdem').style.display = 'none';
+  document.getElementById('btnCancelarOrdem').disabled = false;
+  document.getElementById('btnSalvarOrdem').disabled = false; 
   document.getElementById('btnCancelarOrdem').style.display = 'inline-block';
   document.getElementById('btnCancelarOrdemAlt').style.display = 'none';
   document.getElementById('btnCancelarVer').style.display = 'none';  
   document.getElementById('btnCancelar').style.display = 'none';  
   document.getElementById('btnCancelarv').style.display = 'none';  
-  document.getElementById('btnCancelaros').style.display = 'inline-block';  
-  
+  document.getElementById('btnCancelaros').style.display = 'inline-block';    
   document.getElementById('ladescos').style.display = 'inline-block';
   document.getElementById('laascos').style.display = 'inline-block';
   document.getElementById('descos').style.display = 'inline-block';
@@ -589,7 +590,10 @@ async function salvarOrdemServicoFi() {
   modal.appendChild(caixa);
   document.body.appendChild(modal);
   btnSim.onclick = () => {
-    document.body.removeChild(modal);        
+    document.body.removeChild(modal);       
+    document.getElementById('btnCancelarOrdem').disabled = true;
+    document.getElementById('btnSalvarOrdem').disabled = true; 
+    bloquearCamposOS(true)
     FinalizarOperacaoOs();        
   };
   btnCancelar.onclick = () => {

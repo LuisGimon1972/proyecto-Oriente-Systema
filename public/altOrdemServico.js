@@ -58,6 +58,10 @@ function resetOsState() {
   document.getElementById('btnCancelarOrdem').style.display = 'none';
   document.getElementById('btnCancelarOrdemAlt').style.display = 'inline-block';
   document.getElementById('btnCancelarVer').style.display = 'none';  
+  document.getElementById('btnCancelarOrdemAlt').disabled = false;
+  document.getElementById('btnAltOrdem').disabled = false;
+  
+
   document.getElementById('btnCancelaros').style.display = 'none';  
   document.getElementById('btnAltOrdem').style.display = 'inline-block';
   document.getElementById("controleod").readOnly = true;
@@ -693,7 +697,10 @@ function pagarOrdemOsOs() {
   modal.appendChild(caixa);
   document.body.appendChild(modal);
   btnSim.onclick = () => {
-    document.body.removeChild(modal);        
+    document.body.removeChild(modal);  
+    document.getElementById('btnCancelarOrdemAlt').disabled = true;
+    document.getElementById('btnAltOrdem').disabled = true;    
+    bloquearCamposOS(true)  
     FinalizarOperacaoOsOs();        
   };
   btnCancelar.onclick = () => {
