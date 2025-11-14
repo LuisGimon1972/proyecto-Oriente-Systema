@@ -16,7 +16,7 @@ let trocovi = 0
 let nosx = 0
 let objetoSelecionado
 const os_form = document.getElementById('form-ordens');
-
+//Estaba aqui
 if (os_form) os_form.onsubmit = handleFormSubmitOs;
 
 async function editordemos(osId) {
